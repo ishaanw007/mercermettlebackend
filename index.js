@@ -23,8 +23,16 @@ const storage = multer.diskStorage({
     cb(null, Date.now() + ".webm");
   },
 });
-
+const storageResume = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "resumes/");
+  },
+  filename: (req, file, cb) => {
+    cb(null, req.body.jobId + "-" + req.body.email + ".pdf");
+  },
+});
 const upload = multer({ storage: storage });
+const uploadResume = multer({ storage: storageResume });
 
 app.post("/submit-code", (req, res) => {
   console.log("hello");
@@ -62,6 +70,67 @@ app.post("/submit-code", (req, res) => {
   });
 });
 
+app.post("/upload-resume", uploadResume.single("resume"), (req, res) => {
+  const form = new FormData();
+
+  const {
+    firstName,
+    lastName,
+    email,
+    phone,
+    noticeperiod,
+    company,
+    currentctc,
+    expectedctc,
+    jobId,
+  } = req.body;
+
+  const text = `${firstName}-${lastName}-${email}-${phone}-${jobId}-${currentctc}-${expectedctc}-${noticeperiod}-${company}`;
+  console.log(text);
+  const base64Encoded = Buffer.from(text).toString("base64");
+  console.log(base64Encoded);
+
+  // Append the uploaded resume to the form with the key as "file:<filename>"
+  form.append("file", fs.createReadStream(req.file.path));
+
+  const forwardRequestOptions = {
+    method: "POST",
+    host: "ec2-3-70-52-108.eu-central-1.compute.amazonaws.com",
+    port: 8080,
+    path: `/v1/applications/apply?encodedDetails=${base64Encoded}`,
+    headers: form.getHeaders(),
+  };
+
+  const forwardRequest = http.request(
+    forwardRequestOptions,
+    (forwardResponse) => {
+      let responseData = "";
+      forwardResponse.on("data", (chunk) => {
+        responseData += chunk;
+      });
+
+      forwardResponse.on("end", () => {
+        console.log("Server Response:", responseData);
+
+        let parsedResponse;
+        try {
+          parsedResponse = JSON.parse(responseData);
+        } catch (error) {
+          parsedResponse = { message: responseData };
+        }
+
+        res.json({
+          message: "Resume uploaded and forwarded successfully!",
+          filePath: `resumes/${req.file.filename}`,
+          forwardedResponse: parsedResponse,
+        });
+      });
+    }
+  );
+
+  form.pipe(forwardRequest);
+});
+
 app.post("/upload", upload.single("video"), (req, res) => {
   const form = new FormData();
   form.append("file", fs.createReadStream(req.file.path));
@@ -93,6 +162,7 @@ app.post("/upload", upload.single("video"), (req, res) => {
           filePath: `uploads/${req.file.filename}`,
           forwardedResponse: parsedResponse,
         });
+        console.log(res);
       });
     }
   );
