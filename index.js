@@ -17,10 +17,11 @@ app.use(bodyParser.json());
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
+    console.log(req.body);
     cb(null, "uploads/");
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + ".webm");
+    cb(null, req.body.jobId + "-" + req.body.email + ".webm");
   },
 });
 const storageResume = multer.diskStorage({
@@ -119,10 +120,23 @@ app.post("/upload-resume", uploadResume.single("resume"), (req, res) => {
           parsedResponse = { message: responseData };
         }
 
-        res.json({
-          message: "Resume uploaded and forwarded successfully!",
-          filePath: `resumes/${req.file.filename}`,
-          forwardedResponse: parsedResponse,
+        // Delete the file from the 'resumes' folder
+        fs.unlink(path.join(__dirname, "resumes", req.file.filename), (err) => {
+          if (err) {
+            console.error(
+              `Error while deleting file ${req.file.filename}: `,
+              err
+            );
+          } else {
+            console.log(`Deleted file ${req.file.filename} successfully.`);
+          }
+
+          // Respond back to the client
+          res.json({
+            message: "Resume uploaded and forwarded successfully!",
+            filePath: `resumes/${req.file.filename}`,
+            forwardedResponse: parsedResponse,
+          });
         });
       });
     }
@@ -133,6 +147,8 @@ app.post("/upload-resume", uploadResume.single("resume"), (req, res) => {
 
 app.post("/upload", upload.single("video"), (req, res) => {
   const form = new FormData();
+  console.log(req.body.jobId);
+  console.log(req.body.email);
   form.append("file", fs.createReadStream(req.file.path));
 
   const forwardRequest = http.request(
@@ -153,16 +169,26 @@ app.post("/upload", upload.single("video"), (req, res) => {
         let parsedResponse;
         try {
           parsedResponse = JSON.parse(responseData);
+          console.log("Server Response:", parsedResponse);
+          console.log(req.file.filename);
         } catch (error) {
           parsedResponse = { message: responseData };
         }
-
-        res.json({
-          message: "Video uploaded and forwarded successfully!",
-          filePath: `uploads/${req.file.filename}`,
-          forwardedResponse: parsedResponse,
+        fs.unlink(path.join(__dirname, "uploads", req.file.filename), (err) => {
+          if (err) {
+            console.error(
+              `Error while deleting file ${req.file.filename}: `,
+              err
+            );
+          } else {
+            console.log(`Deleted file ${req.file.filename} successfully.`);
+          }
+          res.json({
+            message: "Video uploaded and forwarded successfully!",
+            filePath: `uploads/${req.file.filename}`,
+            forwardedResponse: parsedResponse,
+          });
         });
-        console.log(res);
       });
     }
   );
