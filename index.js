@@ -195,7 +195,116 @@ app.post("/upload", upload.single("video"), (req, res) => {
 
   form.pipe(forwardRequest);
 });
+app.get("/api/appliedcandidates", (req, res) => {
+  const selectedJobId = req.query.jobId;
+  console.log(selectedJobId);
 
+  const options = {
+    hostname: "ec2-3-70-52-108.eu-central-1.compute.amazonaws.com",
+    port: 8080,
+    path: `/v1/applications/candidates?jobId=${selectedJobId}`,
+    method: "GET",
+  };
+
+  const apiRequest = http.request(options, (apiResponse) => {
+    let data = "";
+
+    // A chunk of data has been received.
+    apiResponse.on("data", (chunk) => {
+      data += chunk;
+    });
+
+    // The whole response has been received.
+    apiResponse.on("end", () => {
+      console.log(data);
+
+      // Before sending a response, you can add a check to see if the received data is actually JSON.
+      try {
+        res.json(JSON.parse(data));
+      } catch (error) {
+        console.error("Failed to parse response:", error);
+        res.status(500).json({ error: "Failed to parse server response" });
+      }
+    });
+  });
+
+  // Handling errors on the request
+  apiRequest.on("error", (error) => {
+    console.error(`Error fetching candidates: ${error.message}`);
+    res.status(500).json({ error: "Failed to fetch data from the server" });
+  });
+
+  apiRequest.end();
+});
+
+app.get("/api/viewresume", (req, res) => {
+  const selectedJobId = req.query.jobId; // Replace with your jobId or get it dynamically.
+  const email = req.query.emailid; // Replace with your jobId or get it dynamically.
+  console.log(selectedJobId);
+  console.log(email);
+  const options = {
+    hostname: "ec2-3-70-52-108.eu-central-1.compute.amazonaws.com",
+    port: 8080,
+    path: `/v1/apis/pre-signed-url?fileName=${selectedJobId}-${email}.pdf`,
+    method: "GET",
+  };
+
+  const apiRequest = http.request(options, (apiResponse) => {
+    let data = "";
+
+    // A chunk of data has been received.
+    apiResponse.on("data", (chunk) => {
+      data += chunk;
+    });
+
+    // The whole response has been received.
+    apiResponse.on("end", () => {
+      console.log(data);
+      res.json(data);
+    });
+  });
+  apiRequest.on("error", (error) => {
+    console.error(`Error fetching candidates: ${error.message}`);
+    res.status(500).json({ error: "Failed to fetch data" });
+  });
+
+  apiRequest.end();
+});
+
+app.get("/api/viewvideo", (req, res) => {
+  const selectedJobId = req.query.jobId; // Replace with your jobId or get it dynamically.
+  const email = req.query.emailid; // Replace with your jobId or get it dynamically.
+  console.log(selectedJobId);
+  console.log(email);
+  const options = {
+    hostname: "ec2-3-70-52-108.eu-central-1.compute.amazonaws.com",
+    port: 8080,
+    path: `/v1/apis/pre-signed-url?fileName=${selectedJobId}-${email}.webm`,
+    method: "GET",
+  };
+
+  const apiRequest = http.request(options, (apiResponse) => {
+    let data = "";
+
+    // A chunk of data has been received.
+    apiResponse.on("data", (chunk) => {
+      data += chunk;
+    });
+
+    // The whole response has been received.
+    apiResponse.on("end", () => {
+      console.log(data);
+      res.json(data);
+    });
+  });
+  apiRequest.on("error", (error) => {
+    console.error(`Error fetching candidates: ${error.message}`);
+    res.status(500).json({ error: "Failed to fetch data" });
+  });
+
+  apiRequest.end();
+});
+// });
 // app.post("/upload", upload.single("video"), (req, res) => {
 //   res.send("Upload Sucess");
 //   const form = new FormData();
